@@ -1,6 +1,8 @@
 from socket import *
 import os
 
+#use selectors modules to handle multiple inputs
+
 def parseInput(rawString):
 	parsedText = []
 	currentString = ""
