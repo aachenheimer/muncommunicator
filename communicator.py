@@ -1,7 +1,13 @@
 from socket import *
 import os
+import selectors
+import json
 
-#use selectors modules to handle multiple inputs
+selector = selectors.DefaultSelector()
+
+PORT = 7999
+
+numOfRooms = 5 #change later obv i forget how many rooms there are / read from json file
 
 def parseInput(rawString):
 	parsedText = []
@@ -26,8 +32,8 @@ def parseInput(rawString):
 			onMessage = False
 			continue
 		currentString += currentChar
-		print("appended char \'%c\'" %currentChar, end = '')
-		print("")
+		#print("appended char \'%c\'" %currentChar, end = '')
+		#print("")
 	if currentString != "":
 		parsedText.append(currentString)
 	
@@ -45,19 +51,37 @@ def help(input):
 			
 		elif input[1].upper() == "CONFIG":
 			print("\nOpens the config menu")
-			print("Used to change port, ip, name configuation\n")
+			print("Used to change port, ip, name, and room configuation\n")
 
 def sendmsg(msg):
-	socketfd = socket(AF_INET, SOCK_STREAM)
+	#doesnt need to be registered under selectors because its very briefly established
+	#also this can be blocking b/c we can wait to send the message
+	sendSocketfd = socket(AF_INET, SOCK_STREAM)
+
+def acceptSocket(receiveSocket):
+	#also doesnt need to be registered under selectors b/c again, very briefly established
+	incomingSocketfd, addr = receiveSocket.accept()
+	incomingMsg = incomingSocketfd.recv(1024)
+	print("\nReceived connection from %s\n" %addr)
+
+receiveSocketfd = socket(AF_INET, SOCK_STREAM) #FOR RECEIVING MESSAGES FROM OTHER ROOMS
+receiveSocketfd.setblocking(False)
+receiveSocketfd.listen(numOfRooms)
+selector.register(receiveSocketfd, selectors.EVENT_READ, acceptSocket)
 
 while True:
-	choice = input("Type \'help\' for more options ")
+	choice = input("Type \'help\' for more options\n>")
 
-	print("TESTING %s" %choice)
+	#print("TESTING %s" %choice)
 	
 	parsedInput = parseInput(choice)
-	print("TESTING : ", parsedInput)
+	#print("TESTING : ", parsedInput)
 
 	if parsedInput[0].upper() == "HELP":
+		os.system('cls')
 		help(parsedInput)
+
+	if parsedInput[0].upper() == "EXIT":
+		os.system('cls')
+		exit()
 		
