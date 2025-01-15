@@ -19,6 +19,7 @@ DEFAULTIP = '127.0.0.1' #set later to W003 ip / whatever is in the config file
 #share a master file from W003
 #make the W003 program lol...
 #make input nonblocking
+#make a command to list which room belongs to which committee and an additional parameter to list their ips
 
 def setValues():
 	configFile = open("config.txt", "r")
@@ -77,6 +78,7 @@ def help(input):
 			print("\nExits the program without throwing an error\n")
 
 def sendmsg(msg, ip=DEFAULTIP):
+	#change the parameter to be the room you want to send it to
 	#doesnt need to be registered under selectors because its very briefly established
 	#also this can be blocking b/c we can wait to send the message
 	sendSocketfd = socket(AF_INET, SOCK_STREAM)
