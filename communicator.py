@@ -8,7 +8,8 @@ selector = selectors.DefaultSelector()
 #py2exe for executable file
 #msvcrt for input
 
-PORT = 7999 #change in config file
+PORTHOME = 7999 #change in config file
+PORTHOST = 7998
 NUMROOMS = 5 #change later obv i forget how many rooms there are / read from json file
 DEFAULTIP = '127.0.0.1' #set later to W003 ip / whatever is in the config file
 
@@ -34,7 +35,8 @@ configJSON = open("config.json", "r")
 config = json.load(configJSON)
 configJSON.close()
 
-PORT = config["port"]
+PORTHOME = config["portHome"]
+PORTHOST = config["portHost"]
 DEFAULTIP = config["ip"]
 
 
@@ -50,6 +52,12 @@ def setValues(valueToSet, value):
     configJSON = open("config.json", "w")
     configJSON.write(configNew)
     configJSON.close()
+
+def writeConfigFile():
+	configJSON = open("config.json", "r")
+	config = json.load(configJSON)
+	for currentEntry in config.keys():
+		print("%s - %s" %(currentEntry, config[currentEntry]))
 
 def parseInput(rawString):
     parsedText = []
@@ -106,7 +114,10 @@ def help(input):
         return 0
         
 def config(input):
-    pass
+    print("\nWelcome to the config menu\nType in exit to return to default menu\n\n\n")
+    while True:
+	return 0
+	
 
 def sendmsg(msg, room="W003"):
     ip = roomToIP(room)
@@ -116,7 +127,7 @@ def sendmsg(msg, room="W003"):
     #doesnt need to be registered under selectors because its very briefly established
     #also this can be blocking b/c we can wait to send the message
     sendSocketfd = socket(AF_INET, SOCK_STREAM)
-    sendSocketfd.connect((ip, 7998)) #ok so basically only one port; outgoing and incoming. just switch it up
+    sendSocketfd.connect((ip, PORTHOST)) #ok so basically only one port; outgoing and incoming. just switch it up
     sendSocketfd.send(msg.encode())
     sendSocketfd.close()
     
@@ -136,7 +147,7 @@ def acceptSocket(receiveSocket):
 
 receiveSocketfd = socket(AF_INET, SOCK_STREAM) #FOR RECEIVING MESSAGES FROM OTHER ROOMS
 receiveSocketfd.setblocking(False)
-receiveSocketfd.bind(('127.0.0.1', PORT))
+receiveSocketfd.bind(('127.0.0.1', PORTHOME))
 receiveSocketfd.listen(NUMROOMS)
 selector.register(receiveSocketfd, selectors.EVENT_READ, acceptSocket)
 
@@ -168,8 +179,14 @@ while True:
     #   os.system('cls')
         if len(parsedInput) > 2:
             sendmsg(parsedInput[1], parsedInput[2])
-        else:
+        elif:
             sendmsg(parsedInput[1])
+	else:
+	    print("\nERROR : Please attach a message!\n")
+
+    elif parsedInput[0].upper() == "CONFIG":
+    #   os.system('cls')
+        
 
     else:
         print("\nUnrecognized command : \"%s\"\n" %choice)
