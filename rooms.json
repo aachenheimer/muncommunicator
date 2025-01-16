@@ -1,10 +1,26 @@
 {
 	"W003": {
-		"name": "base",
+		"name": "headquarters",
 		"ip": "127.0.0.1"
-	}
+	},
 	"W004": {
-		"name": "nameHere",
+		"name": "SCOTUS",
+		"ip": "127.0.0.1"
+	},
+	"W006": {
+		"name": "FUTURISTIC",
+		"ip": "127.0.0.1"
+	},
+	"W008": {
+		"name": "HUMAN RIGHTS",
+		"ip": "127.0.0.1"
+	},
+	"W010": {
+		"name": "ENVIRONMENTAL",
+		"ip": "127.0.0.1"
+	},
+	"W014": {
+		"name": "SECURITY COUNCIL",
 		"ip": "127.0.0.1"
 	}
 }
