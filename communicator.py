@@ -2,6 +2,7 @@ from socket import *
 import os
 import selectors
 import json
+import sys
 from msvcrt import *
 
 selector = selectors.DefaultSelector()
@@ -18,12 +19,12 @@ DEFAULTIP = '127.0.0.1' #set later to W003 ip / whatever is in the config file
 #makes set value function better n easier
 
 #TODO
-#send messages ability
-#change config file ability
+#send messages ability DONE
+#change config file ability DONE
 #update (make a command called update) W003 what your committee name and room number is
 #share a master file from W003
 #make the W003 program lol...
-#make input nonblocking
+#make input nonblocking DONE
 #make a command to list which room belongs to which committee and an additional parameter to list their ips
 
 roomsJSON = open("rooms.json", "r")
@@ -55,10 +56,16 @@ def setValues(valueToSet, value):
     configJSON.close()
 
 def writeConfigFile():
-	configJSON = open("config.json", "r")
-	config = json.load(configJSON)
-	for currentEntry in config.keys():
-		print("%s - %s" %(currentEntry, config[currentEntry]))
+    print()
+    configJSON = open("config.json", "r")
+    config = json.load(configJSON)
+    for currentEntry in config.keys():
+        print("%s - %s" %(currentEntry, config[currentEntry]))
+        
+def roomsReload():
+    roomsJSON = open("rooms.json", "r")
+    rooms = json.load(roomsJSON)
+    roomsJSON.close()
 
 def parseInput(rawString):
     parsedText = []
@@ -115,8 +122,8 @@ def help(input):
         return 0
         
 def config():
-    print("\nWelcome to the config menu\nType \'exit\' to return to default menu")
     while True:
+        print("\nWelcome to the config menu\nType \'exit\' to return to default menu")
         choice = ""
         while True:
             events = selector.select(0)
@@ -125,18 +132,24 @@ def config():
                 callback(receiveSocketfd)
 
             if kbhit():
-                char = getche()
-                if ord(char) != 13 or ord(char) != 8:
+                char = getch()
+                c = ord(char)
+                if c != 13 and c != 8:
                     try:
                         choice += char.decode()
+                        sys.stdout.write(char.decode())
+                        sys.stdout.flush()
                     except:
                         continue
-                elif ord(char) == 8:
-                    choice.pop(len(choice)-1)
+                elif c == 8 and len(choice) > 0:
+                    choice = choice[:len(choice)-1]
+                    #print("\b\b",end='')
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
 
                 else:
                     break
-        print("%s\n"%choice)
+        #print("\n%s\n"%choice)
         if choice == "":
             continue
 
@@ -145,14 +158,34 @@ def config():
         if parsedInput[0].upper() == "EXIT":
             print("Returning to main terminal\n")
             return 0
+            
+        elif parsedInput[0].upper() == "HELP":
+            print("\n\nOPTIONS:\n-room\n-name\n-ip (of W003)\n-portHome (incoming)\n-portHost (outgoing)")
+            print("-reload\nreloads room data\n")
+            print("-set *valueToSet *value\nchanges requested value\n")
+            print("-view\nviews the config file\n")
+            
+        elif parsedInput[0].upper() == "RELOAD":
+            roomsReload()
+            print()
+            
+        elif parsedInput[0].upper() == "SET":
+            if len(parsedInput) < 3:
+                print("\nERROR : Not enough arguments!\n")
+                continue
+            else:
+                setValues(parsedInput[1], parsedInput[2])
+        
+        elif parsedInput[0].upper() == "VIEW":
+            writeConfigFile()
 	
 
 def sendmsg(msg, room="W003"):
-    ip = roomToIP(room)
+    ip = roomToIP(room.upper())
     if room == "null":
         print("\nInvalid IP / Room!\n")
         return 1
-    print("TESTING : Connecting to room %s on IP %s" %(room, ip))
+    print("Connecting to room %s on IP %s" %(room, ip))
     #doesnt need to be registered under selectors because its very briefly established
     #also this can be blocking b/c we can wait to send the message
     sendSocketfd = socket(AF_INET, SOCK_STREAM)
@@ -173,6 +206,7 @@ def roomToIP(room):
 def acceptSocket(receiveSocket):
     #also doesnt need to be registered under selectors b/c again, very briefly established
     incomingSocketfd, addr = receiveSocket.accept()
+    incomingSocketfd.setblocking(True)
     incomingMsg = incomingSocketfd.recv(1024)
     print("\nReceived connection from %s" %addr[0])
     print("Received msg : %s\n\a" %incomingMsg.decode())
@@ -196,19 +230,27 @@ while True:
             callback(receiveSocketfd)
 
         if kbhit():
-            char = getche()
-            if ord(char) != 13:
+            char = getch()
+            c = ord(char)
+            if c != 13 and c != 8:
                 try:
                     choice += char.decode()
+                    sys.stdout.write(char.decode())
+                    sys.stdout.flush()
                 except:
                     continue
+            elif c == 8 and len(choice) > 0:
+                choice = choice[:len(choice)-1]
+                #print("\b ",end='')
+                sys.stdout.write("\b \b")
+                sys.stdout.flush()
+
             else:
                 break
 
-
     #choice = input("Type \'help\' for more options\n>")
 
-    print("%s\n"%choice)
+    #print("\n%s\n"%choice)
     
     if choice == "":
         continue
