@@ -2,6 +2,7 @@ from socket import *
 import os
 import selectors
 import json
+from msvcrt import *
 
 selector = selectors.DefaultSelector()
 
@@ -113,21 +114,53 @@ def help(input):
         print("\nExits the program without throwing an error\n")
         return 0
         
-def config(input):
-    print("\nWelcome to the config menu\nType in exit to return to default menu\n\n\n")
+def config():
+    print("\nWelcome to the config menu\nType \'exit\' to return to default menu")
     while True:
-	return 0
+        choice = ""
+        while True:
+            events = selector.select(0)
+            for key in events:
+                callback = key[0].data
+                callback(receiveSocketfd)
+
+            if kbhit():
+                char = getche()
+                if ord(char) != 13 or ord(char) != 8:
+                    try:
+                        choice += char.decode()
+                    except:
+                        continue
+                elif ord(char) == 8:
+                    choice.pop(len(choice)-1)
+
+                else:
+                    break
+        print("%s\n"%choice)
+        if choice == "":
+            continue
+
+        parsedInput = parseInput(choice)
+
+        if parsedInput[0].upper() == "EXIT":
+            print("Returning to main terminal\n")
+            return 0
 	
 
 def sendmsg(msg, room="W003"):
     ip = roomToIP(room)
     if room == "null":
         print("\nInvalid IP / Room!\n")
+        return 1
     print("TESTING : Connecting to room %s on IP %s" %(room, ip))
     #doesnt need to be registered under selectors because its very briefly established
     #also this can be blocking b/c we can wait to send the message
     sendSocketfd = socket(AF_INET, SOCK_STREAM)
-    sendSocketfd.connect((ip, PORTHOST)) #ok so basically only one port; outgoing and incoming. just switch it up
+    try:
+        sendSocketfd.connect((ip, PORTHOST)) #ok so basically only one port; outgoing and incoming. just switch it up
+    except:
+        print("\nERROR : Host refused!\n")
+        return 1
     sendSocketfd.send(msg.encode())
     sendSocketfd.close()
     
@@ -154,15 +187,32 @@ selector.register(receiveSocketfd, selectors.EVENT_READ, acceptSocket)
 #setValues("ip", "192.168.50.173")
 
 while True:
-    events = selector.select(0)
-    for key in events:
-        callback = key[0].data
-        callback(receiveSocketfd)
+    choice = ""
+    print("Type \'help\' for more options")
+    while True:
+        events = selector.select(0)
+        for key in events:
+            callback = key[0].data
+            callback(receiveSocketfd)
 
-    choice = input("Type \'help\' for more options\n>")
+        if kbhit():
+            char = getche()
+            if ord(char) != 13:
+                try:
+                    choice += char.decode()
+                except:
+                    continue
+            else:
+                break
 
-    #print("TESTING %s" %choice)
+
+    #choice = input("Type \'help\' for more options\n>")
+
+    print("%s\n"%choice)
     
+    if choice == "":
+        continue
+
     parsedInput = parseInput(choice)
     #print("TESTING : ", parsedInput)
 
@@ -179,14 +229,14 @@ while True:
     #   os.system('cls')
         if len(parsedInput) > 2:
             sendmsg(parsedInput[1], parsedInput[2])
-        elif:
+        elif len(parsedInput) == 2:
             sendmsg(parsedInput[1])
-	else:
-	    print("\nERROR : Please attach a message!\n")
+        else:
+            print("\nERROR : Please attach a message!\n")
 
     elif parsedInput[0].upper() == "CONFIG":
     #   os.system('cls')
+        config()
         
-
     else:
         print("\nUnrecognized command : \"%s\"\n" %choice)
