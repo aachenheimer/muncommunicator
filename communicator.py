@@ -21,11 +21,11 @@ DEFAULTIP = '127.0.0.1' #set later to W003 ip / whatever is in the config file
 #TODO
 #send messages ability DONE
 #change config file ability DONE
-#update (make a command called update) W003 what your committee name and room number is
-#share a master file from W003
-#make the W003 program lol...
+#update (make a command called update) W003 what your committee name and room number is DONE
+#share a master file from W003 DONE
+#make the W003 program lol... DONE
 #make input nonblocking DONE
-#make a command to list which room belongs to which committee and an additional parameter to list their ips
+#make a command to list which room belongs to which committee and an additional parameter to list their ips DONE
 
 roomsJSON = open("rooms.json", "r")
 rooms = json.load(roomsJSON)
@@ -61,11 +61,40 @@ def writeConfigFile():
     config = json.load(configJSON)
     for currentEntry in config.keys():
         print("%s - %s" %(currentEntry, config[currentEntry]))
+
+def writeRoomsFile():
+    print()
+    roomsJSON = open("rooms.json", "r")
+    rooms = json.load(roomsJSON)
+    for currentEntry in rooms.keys():
+        print("%s - %s"%(currentEntry, rooms[currentEntry]))
+
+def writeRoomsReadable():
+    print()
+    roomsJSON = open("rooms.json", "r")
+    rooms = json.load(roomsJSON)
+    for currentEntry in rooms.keys():
+        print("%s - %s"%(currentEntry, rooms[currentEntry]["name"]))
         
 def roomsReload():
     roomsJSON = open("rooms.json", "r")
-    rooms = json.load(roomsJSON)
+    return json.load(roomsJSON)
     roomsJSON.close()
+
+def sendInfo(committeeName, room):
+    setValues("name", committeeName)
+    setValues("room", room)
+    print("\nSending data to W003 on IP %s...\n" %DEFAULTIP)
+    sendSocketfd = socket(AF_INET, SOCK_STREAM)
+    try:
+        sendSocketfd.connect((DEFAULTIP, PORTHOST))
+    except:
+        print("\nERROR : Host refused!\n")
+        return 1
+    data = "%" + committeeName + "%" + room + "%"
+    print("SENDING : %s" %data)
+    sendSocketfd.send(data.encode())
+    sendSocketfd.close()
 
 def parseInput(rawString):
     parsedText = []
@@ -102,6 +131,7 @@ def help(input):
         print("\nsendmsg : sends a message, by default to W003")
         print("config : opens config menu")
         print("exit : exits the program")
+        print("list : gives a list of all committees and their rooms")
         print("type \'help\' followed by the name of the command you want more information on\n")
         return 0
     
@@ -117,11 +147,15 @@ def help(input):
         print("Used to change port, default send ip, name, and room configuation\n")
         return 0
 
+    elif input[1].upper() == "LIST":
+        print("\nVisit the config menu for more information such as IP address for each room")
+        return 0
+
     elif input[1].upper() == "EXIT":
         print("\nExits the program without throwing an error\n")
         return 0
         
-def config():
+def configFunc():
     while True:
         print("\nWelcome to the config menu\nType \'exit\' to return to default menu")
         choice = ""
@@ -156,17 +190,20 @@ def config():
         parsedInput = parseInput(choice)
 
         if parsedInput[0].upper() == "EXIT":
-            print("Returning to main terminal\n")
+            print("\nReturning to main terminal\n")
             return 0
             
         elif parsedInput[0].upper() == "HELP":
             print("\n\nOPTIONS:\n-room\n-name\n-ip (of W003)\n-portHome (incoming)\n-portHost (outgoing)")
             print("-reload\nreloads room data\n")
             print("-set *valueToSet *value\nchanges requested value\n")
-            print("-view\nviews the config file\n")
+            print("-view *dict\nviews the indicated dictionary\n")
+            print("-update *\"committeeName\" *room\nupdates W003\n")
+            print("-request\nrequests room data from W003\n")
             
         elif parsedInput[0].upper() == "RELOAD":
-            roomsReload()
+            print("\nReloading room dict!")
+            rooms = roomsReload()
             print()
             
         elif parsedInput[0].upper() == "SET":
@@ -177,15 +214,31 @@ def config():
                 setValues(parsedInput[1], parsedInput[2])
         
         elif parsedInput[0].upper() == "VIEW":
-            writeConfigFile()
+            if len(parsedInput) > 1:
+                writeRoomsFile()
+            else:
+                writeConfigFile()
+
+        elif parsedInput[0].upper() == "UPDATE":
+            if len(parsedInput) < 3:
+                sendInfo(config["name"], config["room"])
+                #print("\nERROR : Not enough arguments!\n")
+            else:
+                sendInfo(parsedInput[1], parsedInput[2])
+
+        elif parsedInput[0].upper() == "REQUEST":
+            requestRoomsData()
+
+        else:
+            print("\nUnrecognized command : \"%s\"\n" %choice)
 	
 
 def sendmsg(msg, room="W003"):
     ip = roomToIP(room.upper())
-    if room == "null":
+    if ip == "null":
         print("\nInvalid IP / Room!\n")
         return 1
-    print("Connecting to room %s on IP %s" %(room, ip))
+    print("\n\nConnecting to room %s on IP %s" %(room, ip))
     #doesnt need to be registered under selectors because its very briefly established
     #also this can be blocking b/c we can wait to send the message
     sendSocketfd = socket(AF_INET, SOCK_STREAM)
@@ -195,8 +248,25 @@ def sendmsg(msg, room="W003"):
         print("\nERROR : Host refused!\n")
         return 1
     sendSocketfd.send(msg.encode())
+    print("\nSent!\n")
     sendSocketfd.close()
     
+def requestRoomsData():
+    socketfd = socket(AF_INET, SOCK_STREAM)
+    try:
+        socketfd.connect((DEFAULTIP, PORTHOST))
+    except:
+        print("\nERROR : Host refused!\n")
+        return 1
+    socketfd.send("@".encode())
+    raw = socketfd.recv(1024).decode()
+    #print("\nTESTING : %s"%raw)
+    roomsDict = json.loads(raw)
+    roomsJSON = open("rooms.json", "w")
+    roomsJSON.write(json.dumps(roomsDict))
+    roomsJSON.close()
+    socketfd.close()
+
 def roomToIP(room):
     if room not in rooms.keys():
         return "null"
@@ -278,7 +348,10 @@ while True:
 
     elif parsedInput[0].upper() == "CONFIG":
     #   os.system('cls')
-        config()
+        configFunc()
+
+    elif parsedInput[0].upper() == "LIST":
+        writeRoomsReadable()
         
     else:
         print("\nUnrecognized command : \"%s\"\n" %choice)
