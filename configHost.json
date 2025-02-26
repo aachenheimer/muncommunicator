@@ -1,0 +1,7 @@
+{
+	"room":"W003",
+	"name":"Headquarters",
+	"ip":"127.0.0.1",
+	"portHome":7998,
+	"portHost":7999
+}
